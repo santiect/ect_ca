@@ -15,13 +15,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:linear-gradient(160d
 .slide.prev{opacity:0;transform:translateX(-60px)}
 
 /* ─── NAV ─── */
-#nav{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;z-index:100;background:rgba(15,23,42,.78);backdrop-filter:blur(12px);padding:10px 20px;border-radius:40px;border:1px solid rgba(255,255,255,.2)}
-#nav button{background:none;border:none;color:rgba(255,255,255,.85);cursor:pointer;font-size:1.1rem;padding:4px 10px;border-radius:6px;transition:.2s}
+#nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%) scale(var(--nav-scale,1));transform-origin:center bottom;display:flex;align-items:center;gap:10px;z-index:100;background:rgba(15,23,42,.78);backdrop-filter:blur(12px);padding:6px 14px 7px;border-radius:14px 14px 0 0;border:1px solid rgba(255,255,255,.2);border-bottom:none}
+#nav button{background:none;border:none;color:rgba(255,255,255,.85);cursor:pointer;font-size:.95rem;padding:2px 6px;border-radius:6px;transition:.2s}
 #nav button:hover{color:#00d4ff;background:rgba(0,212,255,.1)}
-#progress-wrap{display:flex;gap:6px;align-items:center}
-.prog-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);transition:.3s;cursor:pointer}
+#progress-wrap{display:flex;gap:5px;align-items:center}
+.prog-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.4);transition:.3s;cursor:pointer}
 .prog-dot.on{background:var(--cyan);transform:scale(1.4)}
-#slide-num{font-size:.75rem;color:rgba(255,255,255,.62);min-width:50px;text-align:center}
+#slide-num{font-size:.68rem;color:rgba(255,255,255,.62);min-width:42px;text-align:center}
 
 /* ─── HELPERS ─── */
 :root{--cyan:#00d4ff;--purple:#a855f7;--green:#10b981;--orange:#f97316;--pink:#ec4899;--yellow:#eab308;--red:#ef4444;--teal:#14b8a6;--indigo:#6366f1;--violet:#8b5cf6;--emerald:#34d399;--amber:#f59e0b;--blue:#3b82f6}
@@ -625,6 +625,15 @@ document.addEventListener('wheel', e => {
   else prevSlide();
   lastWheelNavAt = now;
 }, { passive: false });
+
+function updateNavScale() {
+  const scale = (window.visualViewport && window.visualViewport.scale) ? window.visualViewport.scale : 1;
+  document.documentElement.style.setProperty('--nav-scale', String(1 / scale));
+}
+updateNavScale();
+window.addEventListener('resize', updateNavScale);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', updateNavScale);
+
 updateNav();
 
 /* ══════════════════════════════
@@ -695,24 +704,86 @@ function aHero() {
 function aOtim() {
   const s = mkCanvas('c-otim'); if (!s) return ()=>{};
   const {ctx,w,h} = s;
-  let bx=w*.15, t=0, raf;
-  const cx=w*.5;
-  const par = x => h*.2 + (x-cx)*(x-cx)/(w*.4)*.85;
+  const depot = { x:w*.5, y:h*.5 };
+  const clients = [
+    { x:w*.22, y:h*.28 },
+    { x:w*.18, y:h*.5 },
+    { x:w*.24, y:h*.72 },
+    { x:w*.78, y:h*.24 },
+    { x:w*.86, y:h*.5 },
+    { x:w*.78, y:h*.76 },
+    { x:w*.46, y:h*.14 },
+    { x:w*.56, y:h*.14 },
+    { x:w*.66, y:h*.16 }
+  ];
+  const routes = [
+    [depot, clients[0], clients[1], clients[2], depot],
+    [depot, clients[3], clients[4], clients[5], depot],
+    [depot, clients[6], clients[7], clients[8], depot]
+  ];
+
+  function prepRoute(route){
+    const segs=[]; let len=0;
+    for(let i=0;i<route.length-1;i++){
+      const a=route[i], b=route[i+1], l=Math.hypot(b.x-a.x,b.y-a.y);
+      segs.push(l); len+=l;
+    }
+    return { route, segs, len };
+  }
+
+  function pointAt(meta,d){
+    let rem = d % meta.len;
+    for(let i=0;i<meta.segs.length;i++){
+      if(rem<=meta.segs[i]){
+        const a=meta.route[i], b=meta.route[i+1], u=rem/meta.segs[i];
+        return { x:a.x+(b.x-a.x)*u, y:a.y+(b.y-a.y)*u };
+      }
+      rem -= meta.segs[i];
+    }
+    return { x:meta.route[0].x, y:meta.route[0].y };
+  }
+
+  const metas = routes.map(prepRoute);
+  const pulses = [];
+  metas.forEach((m,ri)=>{
+    for(let i=0;i<3;i++) pulses.push({ ri, d:(i/3)*m.len, spd:1.5+ri*.35+i*.18 });
+  });
+
+  let t=0, raf;
   function draw() {
-    t+=.02; ctx.clearRect(0,0,w,h);
+    t+=.016; ctx.clearRect(0,0,w,h);
     for(let x=0;x<w;x+=44){ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
     for(let y=0;y<h;y+=44){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
-    ctx.beginPath();ctx.strokeStyle='rgba(249,115,22,.75)';ctx.lineWidth=3;
-    for(let x=0;x<w;x+=2){const y=par(x);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-    ctx.stroke();
-    bx += (cx-bx)*.025 + Math.sin(t*2.8)*Math.max(0,Math.abs(cx-bx)*.08);
-    const by=par(bx);
-    const gr=ctx.createRadialGradient(bx,by,0,bx,by,28);
-    gr.addColorStop(0,'rgba(249,115,22,.8)');gr.addColorStop(1,'rgba(249,115,22,0)');
-    ctx.beginPath();ctx.arc(bx,by,28,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
-    ctx.beginPath();ctx.arc(bx,by,10,0,Math.PI*2);ctx.fillStyle='#f97316';ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='12px sans-serif';ctx.textAlign='center';
-    ctx.fillText('mínimo ótimo',cx,par(cx)+22);ctx.textAlign='left';
+
+    routes.forEach((r,ri)=>{
+      const alpha = .22 + ri*.08;
+      ctx.beginPath();ctx.lineWidth=1.8;ctx.strokeStyle=`rgba(249,115,22,${alpha})`;
+      ctx.moveTo(r[0].x,r[0].y);
+      for(let i=1;i<r.length;i++) ctx.lineTo(r[i].x,r[i].y);
+      ctx.stroke();
+    });
+
+    pulses.forEach(p=>{
+      const m=metas[p.ri]; p.d=(p.d+p.spd)%m.len; const pt=pointAt(m,p.d);
+      const halo=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,14);
+      halo.addColorStop(0,'rgba(251,146,60,.9)');
+      halo.addColorStop(1,'rgba(251,146,60,0)');
+      ctx.beginPath();ctx.arc(pt.x,pt.y,14,0,Math.PI*2);ctx.fillStyle=halo;ctx.fill();
+      ctx.beginPath();ctx.arc(pt.x,pt.y,3.4,0,Math.PI*2);ctx.fillStyle='#fb923c';ctx.fill();
+    });
+
+    ctx.beginPath();ctx.arc(depot.x,depot.y,8.5,0,Math.PI*2);ctx.fillStyle='#f97316';ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.72)';ctx.font='11px sans-serif';ctx.textAlign='center';
+    ctx.fillText('Deposito',depot.x,depot.y+24);
+
+    clients.forEach((c,i)=>{
+      const r=8.5+Math.sin(t*2+i)*1.5;
+      ctx.beginPath();ctx.arc(c.x,c.y,r,0,Math.PI*2);ctx.strokeStyle='rgba(251,146,60,.2)';ctx.lineWidth=1;ctx.stroke();
+      ctx.beginPath();ctx.arc(c.x,c.y,4.2,0,Math.PI*2);ctx.fillStyle='rgba(251,146,60,.86)';ctx.fill();
+    });
+
+    ctx.fillStyle='rgba(255,255,255,.42)';ctx.font='12px sans-serif';ctx.textAlign='left';
+    ctx.fillText('Roteamento otimizado de entregas',w*.05,h*.93);
     raf=requestAnimationFrame(draw);
   }
   draw(); return ()=>cancelAnimationFrame(raf);
