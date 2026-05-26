@@ -604,10 +604,27 @@ function updateNav() {
 
 document.getElementById('btn-prev').addEventListener('click', () => cur > 0 && goTo(cur-1));
 document.getElementById('btn-next').addEventListener('click', () => cur < total-1 && goTo(cur+1));
+function nextSlide() { if (cur < total-1) goTo(cur+1); }
+function prevSlide() { if (cur > 0) goTo(cur-1); }
+
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') cur < total-1 && goTo(cur+1);
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') cur > 0 && goTo(cur-1);
+  const nextKeys = ['ArrowRight', 'ArrowDown', 'PageDown', 'Enter'];
+  const prevKeys = ['ArrowLeft', 'ArrowUp', 'PageUp'];
+  if (nextKeys.includes(e.key)) { e.preventDefault(); nextSlide(); }
+  if (prevKeys.includes(e.key)) { e.preventDefault(); prevSlide(); }
 });
+
+let lastWheelNavAt = 0;
+const WHEEL_NAV_COOLDOWN_MS = 420;
+document.addEventListener('wheel', e => {
+  const now = Date.now();
+  if (now - lastWheelNavAt < WHEEL_NAV_COOLDOWN_MS) return;
+  if (Math.abs(e.deltaY) < 10) return;
+  e.preventDefault();
+  if (e.deltaY > 0) nextSlide();
+  else prevSlide();
+  lastWheelNavAt = now;
+}, { passive: false });
 updateNav();
 
 /* ══════════════════════════════
