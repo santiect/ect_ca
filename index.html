@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Computação Aplicada · ECT</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#07071a;font-family:'Segoe UI',system-ui,sans-serif;color:#f0f4ff}
+
+/* ─── DECK ─── */
+#deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+.slide{position:absolute;width:100%;height:100%;display:flex;opacity:0;pointer-events:none;transition:opacity .5s,transform .5s;transform:translateX(60px)}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.prev{opacity:0;transform:translateX(-60px)}
+
+/* ─── NAV ─── */
+#nav{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;z-index:100;background:rgba(0,0,0,.5);backdrop-filter:blur(12px);padding:10px 20px;border-radius:40px;border:1px solid rgba(255,255,255,.08)}
+#nav button{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:1.1rem;padding:4px 10px;border-radius:6px;transition:.2s}
+#nav button:hover{color:#00d4ff;background:rgba(0,212,255,.1)}
+#progress-wrap{display:flex;gap:6px;align-items:center}
+.prog-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);transition:.3s;cursor:pointer}
+.prog-dot.on{background:var(--cyan);transform:scale(1.4)}
+#slide-num{font-size:.75rem;color:rgba(255,255,255,.3);min-width:50px;text-align:center}
+
+/* ─── HELPERS ─── */
+:root{--cyan:#00d4ff;--purple:#a855f7;--green:#10b981;--orange:#f97316;--pink:#ec4899;--yellow:#eab308;--red:#ef4444;--teal:#14b8a6;--indigo:#6366f1;--violet:#8b5cf6;--emerald:#34d399;--amber:#f59e0b;--blue:#3b82f6}
+
+canvas.bg{position:absolute;inset:0;width:100%;height:100%}
+
+/* ─── HERO ─── */
+.hero-content{position:relative;z-index:2;padding:0 10%;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center}
+.hero-tag{font-size:.8rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);opacity:.75;margin-bottom:16px}
+.hero-title{font-size:clamp(3rem,7vw,5.5rem);font-weight:900;line-height:.95;color:#fff}
+.hero-title em{font-style:normal;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:1.2rem;color:rgba(255,255,255,.5);margin-top:18px}
+.hero-hint{margin-top:50px;font-size:.75rem;color:rgba(255,255,255,.25);letter-spacing:.08em}
+
+/* ─── INFO SLIDE ─── */
+.info{padding:6% 10%;height:100%;display:flex;flex-direction:column;justify-content:center}
+.label{font-size:.72rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);opacity:.7;margin-bottom:14px}
+.info h2{font-size:clamp(1.8rem,3.5vw,2.7rem);font-weight:800;line-height:1.1;color:#fff;margin-bottom:22px}
+.info h2 span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.info p{font-size:1rem;color:rgba(255,255,255,.62);max-width:660px;line-height:1.65}
+
+.cards{display:flex;gap:16px;margin-top:28px;flex-wrap:wrap}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px;flex:1;min-width:160px}
+.card .ico{font-size:1.8rem;margin-bottom:10px}
+.card h3{font-size:.95rem;font-weight:700;color:#fff;margin-bottom:5px}
+.card p{font-size:.8rem;color:rgba(255,255,255,.42)}
+
+/* ─── TIMELINE ─── */
+.timeline{display:flex;align-items:flex-start;margin-top:36px;gap:0;flex-wrap:wrap}
+.tl-step{display:flex;flex-direction:column;align-items:center}
+.tl-dot{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;flex-shrink:0}
+.tl-dot.on{background:var(--cyan);color:#000}
+.tl-dot.hi{background:var(--purple);color:#fff}
+.tl-dot.off{background:rgba(255,255,255,.1);color:rgba(255,255,255,.3)}
+.tl-line{width:52px;height:2px;background:rgba(255,255,255,.1);margin-top:20px}
+.tl-lbl{font-size:.7rem;color:rgba(255,255,255,.4);text-align:center;margin-top:8px;max-width:80px;line-height:1.3}
+.tl-lbl.on{color:var(--cyan);font-weight:600}
+.tl-lbl.hi{color:var(--purple);font-weight:600}
+
+/* ─── MANDATORY ─── */
+.obrig{padding:4% 8%;height:100%;display:flex;flex-direction:column;justify-content:center}
+.obrig h2{font-size:2rem;font-weight:800;color:#fff;margin-bottom:18px}
+.obrig h2 span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.obrig-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.obrig-col h4{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}
+.obrig-item{font-size:.68rem;background:rgba(255,255,255,.04);border-radius:5px;padding:4px 7px;margin-bottom:3px;color:rgba(255,255,255,.6);line-height:1.3;display:flex;justify-content:space-between}
+.obrig-item span{opacity:.4;font-variant-numeric:tabular-nums;margin-left:4px;flex-shrink:0}
+.tcc{border:1px solid rgba(168,85,247,.3);color:var(--purple)!important}
+
+/* ─── OPTATIVOS INTRO ─── */
+.opt-intro{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:5%}
+.opt-intro h2{font-size:clamp(2rem,5vw,3.8rem);font-weight:900;color:#fff;margin-bottom:18px}
+.opt-intro h2 span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.opt-intro p{color:rgba(255,255,255,.5);margin-bottom:32px;font-size:1rem}
+.tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:700px}
+.tag-chip{font-size:.72rem;font-weight:600;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+
+/* ─── SUBJECT SLIDE ─── */
+.subj{height:100%;display:grid;grid-template-columns:2fr 3fr;position:relative;overflow:hidden}
+.subj::before{content:'';position:absolute;top:-40%;right:-5%;width:55%;height:180%;border-radius:50%;filter:blur(70px);opacity:.12;background:var(--acc,var(--cyan));pointer-events:none}
+.subj-info{display:flex;flex-direction:column;justify-content:center;padding:5% 5% 5% 8%;position:relative;z-index:2}
+.subj-code{font-size:.7rem;font-weight:700;letter-spacing:.12em;color:rgba(255,255,255,.4);margin-bottom:8px;font-family:'Courier New',monospace}
+.subj-title{font-size:clamp(1.4rem,2.5vw,2rem);font-weight:900;line-height:1.1;color:#fff;margin-bottom:10px}
+.subj-title em{font-style:normal}
+.subj-meta{display:flex;gap:8px;margin-bottom:18px}
+.badge{font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px}
+.badge-s{color:#000}
+.badge-o{background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5)}
+.subj-bullets{margin-bottom:20px}
+.subj-bullets li{font-size:.84rem;color:rgba(255,255,255,.6);margin-bottom:6px;list-style:none;padding-left:14px;position:relative;line-height:1.4}
+.subj-bullets li::before{content:'→';position:absolute;left:0;opacity:.4}
+.apps{display:flex;flex-wrap:wrap;gap:5px}
+.app{font-size:.68rem;font-weight:600;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.65)}
+.subj-canvas{position:relative;overflow:hidden}
+.subj-canvas canvas{width:100%;height:100%;display:block}
+
+/* ─── CAREERS ─── */
+.careers{padding:5% 9%;height:100%;display:flex;flex-direction:column;justify-content:center}
+.career-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+.career-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:18px}
+.career-card .ic{font-size:1.6rem;margin-bottom:8px}
+.career-card h4{font-size:.9rem;font-weight:700;color:#fff;margin-bottom:3px}
+.career-card p{font-size:.75rem;color:rgba(255,255,255,.38)}
+
+/* ─── CTA ─── */
+.cta{position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 10%;overflow:hidden}
+.cta canvas{position:absolute;inset:0;width:100%;height:100%}
+.cta-body{position:relative;z-index:2}
+.cta h2{font-size:clamp(3.5rem,8vw,6rem);font-weight:900;line-height:.9;color:#fff}
+.cta h2 span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.cta p{font-size:1rem;color:rgba(255,255,255,.48);margin-top:18px;max-width:480px}
+.cta-pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--cyan),var(--purple));color:#000;font-weight:800;font-size:.9rem;padding:12px 26px;border-radius:30px;margin-top:28px}
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- 0: HERO -->
+<div class="slide active" data-id="hero">
+  <canvas class="bg" id="c-hero"></canvas>
+  <div class="hero-content">
+    <div class="hero-tag">ECT · Bacharelado em Ciências e Tecnologia</div>
+    <h1 class="hero-title">Computação<br><em>Aplicada</em></h1>
+    <p class="hero-sub">Do algoritmo ao mundo real.</p>
+    <p class="hero-hint">Use ← → ou clique nas setas abaixo para navegar</p>
+  </div>
+</div>
+
+<!-- 1: HOOK -->
+<div class="slide" data-id="hook">
+  <div class="info">
+    <div class="label">Por que existe essa ênfase?</div>
+    <h2>Você tem base em exatas.<br><span>E se pudesse usá-la<br>para resolver problemas reais?</span></h2>
+    <p>A Computação Aplicada une programação, matemática e ciências para formar profissionais que resolvem desafios da indústria, da engenharia e da saúde — não só de software.</p>
+    <div class="cards">
+      <div class="card"><div class="ico">🔬</div><h3>Ciência + Engenharia</h3><p>Modelos computacionais para problemas físicos e industriais</p></div>
+      <div class="card"><div class="ico">💻</div><h3>Software + Hardware</h3><p>Do código ao circuito, do app ao microcontrolador</p></div>
+      <div class="card"><div class="ico">📊</div><h3>Dados + Inteligência</h3><p>Machine learning, visão computacional e ciência de dados</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 2: O QUE É -->
+<div class="slide" data-id="what">
+  <div class="info">
+    <div class="label">O que é</div>
+    <h2>Mais que programar.<br><span>É entender, modelar e resolver.</span></h2>
+    <p>O egresso da ênfase em Computação Aplicada consegue conversar tanto com o engenheiro quanto com o time de dados. Tem <strong style="color:var(--cyan)">base matemática forte</strong>, sabe <strong style="color:var(--cyan)">desenvolver sistemas</strong> e entende as <strong style="color:var(--cyan)">demandas reais do mercado</strong>.</p>
+    <div class="cards" style="margin-top:26px">
+      <div class="card" style="border-color:rgba(0,212,255,.2)"><h3 style="color:var(--cyan)">Programador de Sistemas</h3><p>APIs, apps, automação, embarcados</p></div>
+      <div class="card" style="border-color:rgba(168,85,247,.2)"><h3 style="color:var(--purple)">Cientista de Dados</h3><p>ML, análise, visualização, modelos</p></div>
+      <div class="card" style="border-color:rgba(16,185,129,.2)"><h3 style="color:var(--green)">Pesquisador Aplicado</h3><p>Publicações, inovação, P&D</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 3: PARA QUEM -->
+<div class="slide" data-id="forwho">
+  <div class="info">
+    <div class="label">Quem pode fazer</div>
+    <h2>Alunos do <span>BCT</span> a partir do 3º semestre.</h2>
+    <p>Você escolhe a ênfase ao final do 2º período, depois de completar 600h da base comum. A partir daí, nos semestres 4, 5 e 6, você cursa os componentes da Computação Aplicada.</p>
+    <div class="timeline">
+      <div class="tl-step"><div class="tl-dot on">1°</div><div class="tl-lbl on">Base comum</div></div>
+      <div class="tl-line"></div>
+      <div class="tl-step"><div class="tl-dot on">2°</div><div class="tl-lbl on">Base comum<br>+ escolha</div></div>
+      <div class="tl-line"></div>
+      <div class="tl-step"><div class="tl-dot off">3°</div><div class="tl-lbl">Nivelamento</div></div>
+      <div class="tl-line"></div>
+      <div class="tl-step"><div class="tl-dot hi">4°</div><div class="tl-lbl hi">CA começa!</div></div>
+      <div class="tl-line"></div>
+      <div class="tl-step"><div class="tl-dot hi">5°</div><div class="tl-lbl hi">CA</div></div>
+      <div class="tl-line"></div>
+      <div class="tl-step"><div class="tl-dot hi">6°</div><div class="tl-lbl hi">CA + TCC</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 4: BASE -->
+<div class="slide" data-id="base">
+  <div class="info">
+    <div class="label">A base que você já tem</div>
+    <h2><span>1.080h</span> de fundamentos<br>antes de escolher.</h2>
+    <p>O eixo comum do BCT já te dá uma base que a maioria dos cursos de computação não tem: Matemática, Física, Química e Humanidades. Você chega na ênfase pronto para ir mais fundo.</p>
+    <div class="cards" style="margin-top:26px">
+      <div class="card"><div class="ico">∑</div><h3>Matemática</h3><p>Cálculo, Álgebra Linear, Prob. e Estatística</p></div>
+      <div class="card"><div class="ico">⚛</div><h3>Física</h3><p>Mecânica, Modelagem do Mundo Físico</p></div>
+      <div class="card"><div class="ico">🧪</div><h3>Química</h3><p>Química Geral + Experimental</p></div>
+      <div class="card"><div class="ico">🌐</div><h3>CTS</h3><p>Ciência, Tecnologia e Sociedade</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 5: OBRIGATÓRIOS -->
+<div class="slide" data-id="obrig">
+  <div class="obrig">
+    <div class="label">Estrutura curricular</div>
+    <h2>Componentes <span>Obrigatórios</span> — 1.140h</h2>
+    <div class="obrig-grid">
+      <div class="obrig-col">
+        <h4 style="color:var(--cyan)">Matemática</h4>
+        <div class="obrig-item">Matemática Básica e Modelagem<span>60h</span></div>
+        <div class="obrig-item">Álgebra Matricial e Vetorial<span>60h</span></div>
+        <div class="obrig-item">Álgebra Linear<span>60h</span></div>
+        <div class="obrig-item">Cálculo I<span>90h</span></div>
+        <div class="obrig-item">Cálculo II<span>60h</span></div>
+        <div class="obrig-item">Prob. e Estatística<span>60h</span></div>
+      </div>
+      <div class="obrig-col">
+        <h4 style="color:var(--orange)">Física / Mecânica</h4>
+        <div class="obrig-item">Modelagem Físico I<span>30h</span></div>
+        <div class="obrig-item">Modelagem Físico II<span>30h</span></div>
+        <div class="obrig-item">Fundamentos da Mecânica<span>60h</span></div>
+        <div class="obrig-item">Estática para Engenharias<span>30h</span></div>
+        <h4 style="color:var(--pink);margin-top:10px">Química</h4>
+        <div class="obrig-item">Química Geral<span>60h</span></div>
+        <div class="obrig-item">Química Geral Experimental<span>30h</span></div>
+      </div>
+      <div class="obrig-col">
+        <h4 style="color:var(--green)">Programação</h4>
+        <div class="obrig-item">Lógica de Programação<span>60h</span></div>
+        <div class="obrig-item">Linguagem de Programação<span>60h</span></div>
+        <h4 style="color:var(--violet);margin-top:10px">Sociedade / Gestão</h4>
+        <div class="obrig-item">Introdução às C&T<span>30h</span></div>
+        <div class="obrig-item">CTS I e II<span>60h</span></div>
+        <div class="obrig-item">Metodologia Cient.<span>30h</span></div>
+        <div class="obrig-item">Ambiente e Desenvolvimento<span>60h</span></div>
+      </div>
+      <div class="obrig-col">
+        <h4 style="color:var(--violet)">Gestão / Inglês</h4>
+        <div class="obrig-item">Gestão e Economia CTI<span>60h</span></div>
+        <div class="obrig-item">Práticas de Leitura I<span>30h</span></div>
+        <div class="obrig-item">Práticas de Leitura II<span>30h</span></div>
+        <div class="obrig-item">Práticas de Leitura Inglês<span>30h</span></div>
+        <div class="obrig-item tcc" style="margin-top:10px">TCC em Comp. Aplicada<span>60h</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6: OPTATIVOS INTRO -->
+<div class="slide" data-id="optintro">
+  <div class="opt-intro">
+    <div class="label">Componentes Optativos</div>
+    <h2>Agora,<br><span>escolha sua trilha.</span></h2>
+    <p>6 componentes por semestre · 60h cada · semestres 4, 5 e 6</p>
+    <div class="tags">
+      <span class="tag-chip">Otimização</span><span class="tag-chip">Competições de Prog.</span>
+      <span class="tag-chip">POO</span><span class="tag-chip">Machine Learning</span>
+      <span class="tag-chip">Deep Learning</span><span class="tag-chip">Ciência de Dados</span>
+      <span class="tag-chip">Dev Mobile</span><span class="tag-chip">Web Backend</span>
+      <span class="tag-chip">Web Frontend</span><span class="tag-chip">Deploy na Web</span>
+      <span class="tag-chip">IoT</span><span class="tag-chip">Microcontroladores</span>
+      <span class="tag-chip">Prototipagem</span><span class="tag-chip">Visão Computacional</span>
+      <span class="tag-chip">Tópicos Avançados I–V</span>
+    </div>
+  </div>
+</div>
+
+<!-- 7: OTIMIZAÇÃO -->
+<div class="slide" data-id="otimizacao">
+  <div class="subj" style="--acc:var(--orange)">
+    <div class="subj-info">
+      <div class="subj-code">ECT2524</div>
+      <div class="subj-title">Introdução à <em style="color:var(--orange)">Otimização</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--orange)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Modelos matemáticos para encontrar a melhor solução</li>
+        <li>Algoritmos de busca, gradiente e heurísticas</li>
+        <li>Aplicado em IA, logística e engenharia</li>
+      </ul>
+      <div class="apps"><span class="app">Logística</span><span class="app">Finanças</span><span class="app">Machine Learning</span><span class="app">Rotas</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-otim"></canvas></div>
+  </div>
+</div>
+
+<!-- 8: COMPETIÇÕES -->
+<div class="slide" data-id="comp">
+  <div class="subj" style="--acc:var(--green)">
+    <div class="subj-info">
+      <div class="subj-code">ECT2535</div>
+      <div class="subj-title">Treinamento para <em style="color:var(--green)">Competições</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--green)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Resolução de problemas algorítmicos sob pressão</li>
+        <li>Preparação para ICPC, Google Code Jam, Codeforces</li>
+        <li>Raciocínio lógico e implementação rápida</li>
+      </ul>
+      <div class="apps"><span class="app">ICPC / Maratonas</span><span class="app">Big Tech Interviews</span><span class="app">Hackathons</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-comp"></canvas></div>
+  </div>
+</div>
+
+<!-- 9: POO -->
+<div class="slide" data-id="poo">
+  <div class="subj" style="--acc:var(--blue)">
+    <div class="subj-info">
+      <div class="subj-code">ECT2540</div>
+      <div class="subj-title">Programação <em style="color:var(--blue)">Orientada a Objetos</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--blue)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Classes, herança, polimorfismo e encapsulamento</li>
+        <li>Padrões de projeto (Design Patterns)</li>
+        <li>Base para qualquer framework moderno</li>
+      </ul>
+      <div class="apps"><span class="app">Dev de Software</span><span class="app">Games</span><span class="app">Sistemas Corporativos</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-poo"></canvas></div>
+  </div>
+</div>
+
+<!-- 10: ML -->
+<div class="slide" data-id="ml">
+  <div class="subj" style="--acc:var(--purple)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3694</div>
+      <div class="subj-title">Aprendizado <em style="color:var(--purple)">de Máquina</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--purple)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Algoritmos que aprendem com dados</li>
+        <li>Regressão, classificação, clustering e validação</li>
+        <li>Python, scikit-learn e projetos reais</li>
+      </ul>
+      <div class="apps"><span class="app">Saúde</span><span class="app">Antifraude</span><span class="app">Recomendação</span><span class="app">Finanças</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-ml"></canvas></div>
+  </div>
+</div>
+
+<!-- 11: DEEP LEARNING -->
+<div class="slide" data-id="dl">
+  <div class="subj" style="--acc:var(--pink)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3695</div>
+      <div class="subj-title">Aprendizado <em style="color:var(--pink)">Profundo</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--pink)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Redes neurais profundas — como o cérebro, em código</li>
+        <li>Visão, linguagem e geração de conteúdo (IA generativa)</li>
+        <li>PyTorch, CNN, RNN, Transformers</li>
+      </ul>
+      <div class="apps"><span class="app">IA Generativa</span><span class="app">Diagnóstico Médico</span><span class="app">Veículos Autônomos</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-dl"></canvas></div>
+  </div>
+</div>
+
+<!-- 12: CIÊNCIA DE DADOS -->
+<div class="slide" data-id="data">
+  <div class="subj" style="--acc:var(--cyan)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3696</div>
+      <div class="subj-title">Ciência <em style="color:var(--cyan)">de Dados</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--cyan);color:#000">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Extração de valor de grandes volumes de dados</li>
+        <li>Análise exploratória, visualização e storytelling</li>
+        <li>Pandas, NumPy, Matplotlib, Jupyter</li>
+      </ul>
+      <div class="apps"><span class="app">Negócios</span><span class="app">Pesquisa Científica</span><span class="app">Política Pública</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-data"></canvas></div>
+  </div>
+</div>
+
+<!-- 13: DEV MOBILE -->
+<div class="slide" data-id="mobile">
+  <div class="subj" style="--acc:var(--indigo)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3697</div>
+      <div class="subj-title">Dev para <em style="color:var(--indigo)">Dispositivos Móveis</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--indigo)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Apps nativos e híbridos (Android / iOS)</li>
+        <li>UX mobile, ciclo de vida e performance</li>
+        <li>Flutter ou React Native na prática</li>
+      </ul>
+      <div class="apps"><span class="app">Startups</span><span class="app">E-commerce</span><span class="app">Saúde Digital</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-mobile"></canvas></div>
+  </div>
+</div>
+
+<!-- 14: WEB BACKEND -->
+<div class="slide" data-id="back">
+  <div class="subj" style="--acc:var(--teal)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3698</div>
+      <div class="subj-title">Desenvolvimento <em style="color:var(--teal)">Web Backend</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--teal)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>APIs RESTful, autenticação e banco de dados</li>
+        <li>Servidores, filas e microsserviços</li>
+        <li>Node.js, FastAPI e banco relacional/NoSQL</li>
+      </ul>
+      <div class="apps"><span class="app">Fintechs</span><span class="app">SaaS</span><span class="app">Sistemas Críticos</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-back"></canvas></div>
+  </div>
+</div>
+
+<!-- 15: WEB FRONTEND -->
+<div class="slide" data-id="front">
+  <div class="subj" style="--acc:var(--yellow)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3699</div>
+      <div class="subj-title">Desenvolvimento <em style="color:var(--yellow)">Web Frontend</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--yellow);color:#000">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>HTML, CSS e JavaScript na essência</li>
+        <li>Frameworks modernos: React, Vue</li>
+        <li>Design responsivo e acessibilidade</li>
+      </ul>
+      <div class="apps"><span class="app">Produtos Digitais</span><span class="app">UI/UX</span><span class="app">Portfólio</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-front"></canvas></div>
+  </div>
+</div>
+
+<!-- 16: DEPLOY -->
+<div class="slide" data-id="deploy">
+  <div class="subj" style="--acc:#06b6d4">
+    <div class="subj-info">
+      <div class="subj-code">ECT3700</div>
+      <div class="subj-title">Implantação de <em style="color:#06b6d4">Sistema na Web</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:#06b6d4;color:#000">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Do código ao ar: CI/CD, containers e cloud</li>
+        <li>Docker, Linux e monitoramento</li>
+        <li>GitHub Actions, Nginx, deploy automatizado</li>
+      </ul>
+      <div class="apps"><span class="app">DevOps</span><span class="app">Cloud Engineering</span><span class="app">SRE</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-deploy"></canvas></div>
+  </div>
+</div>
+
+<!-- 17: IOT -->
+<div class="slide" data-id="iot">
+  <div class="subj" style="--acc:var(--emerald)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3701</div>
+      <div class="subj-title">Projetos com <em style="color:var(--emerald)">IoT</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--emerald);color:#000">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Sistemas embarcados conectados à internet</li>
+        <li>Sensores, atuadores e protocolo MQTT</li>
+        <li>Automação residencial e industrial na prática</li>
+      </ul>
+      <div class="apps"><span class="app">Casas Inteligentes</span><span class="app">Indústria 4.0</span><span class="app">Agro de Precisão</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-iot"></canvas></div>
+  </div>
+</div>
+
+<!-- 18: MICROCONTROLADORES -->
+<div class="slide" data-id="micro">
+  <div class="subj" style="--acc:var(--red)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3702</div>
+      <div class="subj-title">Projetos com <em style="color:var(--red)">Microcontroladores</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--red)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Programação de hardware: Arduino e similares</li>
+        <li>Controle de motores, sensores e displays</li>
+        <li>Eletrônica básica + código em C/C++</li>
+      </ul>
+      <div class="apps"><span class="app">Robótica</span><span class="app">Automação</span><span class="app">Próteses Inteligentes</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-micro"></canvas></div>
+  </div>
+</div>
+
+<!-- 19: PROTOTIPAGEM -->
+<div class="slide" data-id="proto">
+  <div class="subj" style="--acc:var(--amber)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3703</div>
+      <div class="subj-title">Prototipagem <em style="color:var(--amber)">Mecânica e de Circuitos</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--amber);color:#000">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Design e impressão 3D de peças físicas</li>
+        <li>PCB design e soldagem básica</li>
+        <li>Do conceito ao protótipo funcional</li>
+      </ul>
+      <div class="apps"><span class="app">Hardware Startups</span><span class="app">Design de Produto</span><span class="app">Engenharia</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-proto"></canvas></div>
+  </div>
+</div>
+
+<!-- 20: VISÃO COMPUTACIONAL -->
+<div class="slide" data-id="cv">
+  <div class="subj" style="--acc:var(--violet)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3709</div>
+      <div class="subj-title">Visão <em style="color:var(--violet)">Computacional</em></div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--violet)">60h</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Processamento e análise de imagens e vídeos</li>
+        <li>Detecção de objetos, reconhecimento e segmentação</li>
+        <li>OpenCV, YOLO e redes convolucionais (CNN)</li>
+      </ul>
+      <div class="apps"><span class="app">Imagem Médica</span><span class="app">Veículos Autônomos</span><span class="app">Controle de Qualidade</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-cv"></canvas></div>
+  </div>
+</div>
+
+<!-- 21: TÓPICOS AVANÇADOS -->
+<div class="slide" data-id="topicos">
+  <div class="subj" style="--acc:var(--purple)">
+    <div class="subj-info">
+      <div class="subj-code">ECT3704–3708</div>
+      <div class="subj-title">Tópicos <em style="color:var(--purple)">Avançados</em> I–V</div>
+      <div class="subj-meta"><span class="badge badge-s" style="background:var(--purple)">60h cada</span><span class="badge badge-o">Optativo</span></div>
+      <ul class="subj-bullets">
+        <li>Conteúdo de fronteira — o que está acontecendo agora</li>
+        <li>Temas: IA generativa, blockchain, computação quântica, XR…</li>
+        <li>Currículo vivo que acompanha o mercado</li>
+      </ul>
+      <div class="apps"><span class="app">IA Generativa</span><span class="app">Computação Quântica</span><span class="app">XR / Metaverso</span><span class="app">Bioinformática</span></div>
+    </div>
+    <div class="subj-canvas"><canvas id="c-topicos"></canvas></div>
+  </div>
+</div>
+
+<!-- 22: CARREIRAS -->
+<div class="slide" data-id="careers">
+  <div class="careers">
+    <div class="label">Onde você vai atuar</div>
+    <h2 style="font-size:clamp(1.8rem,3vw,2.5rem);font-weight:800;color:#fff">O mundo inteiro precisa<br><span style="background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent">do que você vai saber fazer.</span></h2>
+    <div class="career-grid">
+      <div class="career-card"><div class="ic">🚀</div><h4>Startups de Tecnologia</h4><p>Construindo produtos do zero com autonomia total</p></div>
+      <div class="career-card"><div class="ic">💳</div><h4>Fintechs</h4><p>Sistemas críticos de pagamento, crédito e risco</p></div>
+      <div class="career-card"><div class="ic">🏭</div><h4>Indústria 4.0</h4><p>Automação, robótica e sistemas embarcados</p></div>
+      <div class="career-card"><div class="ic">🏥</div><h4>Saúde Digital</h4><p>Diagnóstico por IA, wearables e telemedicina</p></div>
+      <div class="career-card"><div class="ic">🌱</div><h4>Agro de Precisão</h4><p>Drones, sensores IoT e análise de dados do campo</p></div>
+      <div class="career-card"><div class="ic">🔬</div><h4>Academia & P&D</h4><p>Pesquisa, inovação e publicações científicas</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 23: CTA -->
+<div class="slide" data-id="cta">
+  <div class="cta">
+    <canvas class="bg" id="c-cta"></canvas>
+    <div class="cta-body">
+      <div class="label">É a sua vez</div>
+      <h2>Vem pra <span>CA.</span></h2>
+      <p>Escolha ao final do 2º período.<br>Comece a construir algo que importa.</p>
+      <div class="cta-pill">✦ Computação Aplicada · ECT</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- NAV -->
+<div id="nav">
+  <button id="btn-prev" title="Anterior">◀</button>
+  <div id="progress-wrap"></div>
+  <button id="btn-next" title="Próximo">▶</button>
+  <span id="slide-num"></span>
+</div>
+
+<script>
+/* ══════════════════════════════
+   SLIDE ENGINE
+══════════════════════════════ */
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let cur = 0;
+
+const progWrap = document.getElementById('progress-wrap');
+const slideNum = document.getElementById('slide-num');
+slides.forEach((_,i) => {
+  const d = document.createElement('div');
+  d.className = 'prog-dot';
+  d.addEventListener('click', () => goTo(i));
+  progWrap.appendChild(d);
+});
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('prev');
+  setTimeout(() => slides[cur].classList.remove('prev'), 600);
+  cur = Math.max(0, Math.min(total-1, n));
+  slides[cur].classList.add('active');
+  updateNav();
+  startAnim(cur);
+}
+
+function updateNav() {
+  document.querySelectorAll('.prog-dot').forEach((d,i) => d.classList.toggle('on', i===cur));
+  slideNum.textContent = `${cur+1} / ${total}`;
+}
+
+document.getElementById('btn-prev').addEventListener('click', () => cur > 0 && goTo(cur-1));
+document.getElementById('btn-next').addEventListener('click', () => cur < total-1 && goTo(cur+1));
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') cur < total-1 && goTo(cur+1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') cur > 0 && goTo(cur-1);
+});
+updateNav();
+
+/* ══════════════════════════════
+   CANVAS UTILS
+══════════════════════════════ */
+let stopCurrent = null;
+function stopAnim() { if (stopCurrent) { stopCurrent(); stopCurrent = null; } }
+
+function startAnim(idx) {
+  stopAnim();
+  const fn = animFns[slides[idx].dataset.id];
+  if (fn) stopCurrent = fn();
+}
+
+function mkCanvas(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const p = el.parentElement;
+  const w = p.clientWidth, h = p.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  el.width = w * dpr; el.height = h * dpr;
+  el.style.width = w + 'px'; el.style.height = h + 'px';
+  const ctx = el.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, w, h };
+}
+
+function rr(ctx, x, y, w, h, r) {
+  if (typeof r === 'number') r = { tl:r, tr:r, bl:r, br:r };
+  ctx.beginPath();
+  ctx.moveTo(x + r.tl, y);
+  ctx.lineTo(x + w - r.tr, y); ctx.arcTo(x+w, y, x+w, y+r.tr, r.tr);
+  ctx.lineTo(x + w, y + h - r.br); ctx.arcTo(x+w, y+h, x+w-r.br, y+h, r.br);
+  ctx.lineTo(x + r.bl, y + h); ctx.arcTo(x, y+h, x, y+h-r.bl, r.bl);
+  ctx.lineTo(x, y + r.tl); ctx.arcTo(x, y, x+r.tl, y, r.tl);
+  ctx.closePath();
+}
+
+/* ══════════════════════════════
+   ANIMATIONS
+══════════════════════════════ */
+
+function aHero() {
+  const s = mkCanvas('c-hero'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const pts = Array.from({length:70}, () => ({
+    x: Math.random()*w, y: Math.random()*h,
+    vx: (Math.random()-.5)*.5, vy: (Math.random()-.5)*.5,
+    r: Math.random()*1.8+.5
+  }));
+  let raf;
+  function draw() {
+    ctx.clearRect(0,0,w,h);
+    for (let i=0;i<pts.length;i++) {
+      const p=pts[i]; p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0||p.x>w)p.vx*=-1; if(p.y<0||p.y>h)p.vy*=-1;
+      for(let j=i+1;j<pts.length;j++){
+        const q=pts[j],dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<110){ctx.beginPath();ctx.strokeStyle=`rgba(0,212,255,${(1-d/110)*.2})`;ctx.lineWidth=.6;ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();}
+      }
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle='rgba(0,212,255,.5)';ctx.fill();
+    }
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aOtim() {
+  const s = mkCanvas('c-otim'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  let bx=w*.15, t=0, raf;
+  const cx=w*.5;
+  const par = x => h*.2 + (x-cx)*(x-cx)/(w*.4)*.85;
+  function draw() {
+    t+=.02; ctx.clearRect(0,0,w,h);
+    for(let x=0;x<w;x+=44){ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+    for(let y=0;y<h;y+=44){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+    ctx.beginPath();ctx.strokeStyle='rgba(249,115,22,.75)';ctx.lineWidth=3;
+    for(let x=0;x<w;x+=2){const y=par(x);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();
+    bx += (cx-bx)*.025 + Math.sin(t*2.8)*Math.max(0,Math.abs(cx-bx)*.08);
+    const by=par(bx);
+    const gr=ctx.createRadialGradient(bx,by,0,bx,by,28);
+    gr.addColorStop(0,'rgba(249,115,22,.8)');gr.addColorStop(1,'rgba(249,115,22,0)');
+    ctx.beginPath();ctx.arc(bx,by,28,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+    ctx.beginPath();ctx.arc(bx,by,10,0,Math.PI*2);ctx.fillStyle='#f97316';ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='12px sans-serif';ctx.textAlign='center';
+    ctx.fillText('mínimo ótimo',cx,par(cx)+22);ctx.textAlign='left';
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aComp() {
+  const s = mkCanvas('c-comp'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const lines=[
+    ['int solve(vector<int>& a) {','#7dd3fc'],
+    ['  sort(a.begin(), a.end());','#f0abfc'],
+    ['  int ans=0, l=0, r=a.size()-1;','#86efac'],
+    ['  while (l < r) {','#fde68a'],
+    ['    if(a[l]+a[r]==target)','#f0abfc'],
+    ['      ans++, l++, r--;','#86efac'],
+    ['    else if(a[l]+a[r]<target)','#f0abfc'],
+    ['      l++;','#7dd3fc'],
+    ['    else r--;','#7dd3fc'],
+    ['  }','#fde68a'],
+    ['  return ans;','#86efac'],
+    ['}','#7dd3fc'],
+  ];
+  let shown=[], li=0, ci=0, phase='typing', pt=0, raf, last=0;
+  function draw(ts) {
+    const dt=ts-last; last=ts;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='rgba(0,0,0,.55)';rr(ctx,w*.04,h*.04,w*.92,h*.88,10);ctx.fill();
+    ctx.strokeStyle='rgba(16,185,129,.2)';ctx.lineWidth=1;rr(ctx,w*.04,h*.04,w*.92,h*.88,10);ctx.stroke();
+    ctx.fillStyle='rgba(16,185,129,.25)';rr(ctx,w*.04,h*.04,w*.92,26,{tl:10,tr:10,bl:0,br:0});ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='10px monospace';ctx.fillText('● ● ●  solution.cpp',w*.04+10,h*.04+16);
+    const lh=20, sy=h*.04+38;
+    shown.forEach((l,i)=>{
+      ctx.font='12px monospace';ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillText(String(i+1).padStart(2,' '),w*.04+6,sy+i*lh);
+      ctx.fillStyle=lines[i][1];ctx.fillText(l,w*.04+32,sy+i*lh);
+    });
+    if(phase==='typing'){
+      pt+=dt;
+      if(pt>35&&li<lines.length){pt=0;if(!shown[li])shown[li]='';if(ci<lines[li][0].length){shown[li]+=lines[li][0][ci++];}else{li++;ci=0;}}
+      if(li>=lines.length){phase='wait';pt=0;}
+      if(Math.floor(Date.now()/500)%2&&shown.length){
+        const cy2=sy+(shown.length-1)*lh,cx2=w*.04+32+ctx.measureText(shown[shown.length-1]||'').width;
+        ctx.fillStyle='#10b981';ctx.fillRect(cx2,cy2-11,7,14);
+      }
+    }
+    if(phase==='wait'){
+      pt+=dt;
+      if(pt>600){
+        const a=Math.min(1,(pt-600)/300);
+        ctx.fillStyle=`rgba(16,185,129,${a*.88})`;rr(ctx,w*.25,h*.3,w*.5,h*.3,14);ctx.fill();
+        ctx.fillStyle='#fff';ctx.font='bold 26px sans-serif';ctx.textAlign='center';
+        ctx.fillText('Accepted! ✓',w*.5,h*.48);ctx.font='13px sans-serif';ctx.fillStyle='rgba(255,255,255,.7)';
+        ctx.fillText('0.03s · 8MB',w*.5,h*.48+22);ctx.textAlign='left';
+      }
+      if(pt>2800){phase='typing';shown=[];li=0;ci=0;pt=0;}
+    }
+    raf=requestAnimationFrame(draw);
+  }
+  raf=requestAnimationFrame(draw); return ()=>cancelAnimationFrame(raf);
+}
+
+function aPoo() {
+  const s = mkCanvas('c-poo'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const cls=[
+    {name:'Animal',x:w*.5,y:h*.18,attrs:['- nome: String','- peso: float'],mths:['+falar()  +mover()'],col:'#3b82f6'},
+    {name:'Cachorro',x:w*.28,y:h*.62,attrs:['- raça: String'],mths:['+falar()  +buscar()'],col:'#60a5fa'},
+    {name:'Gato',x:w*.72,y:h*.62,attrs:['- indoor: bool'],mths:['+ronronar()'],col:'#93c5fd'},
+  ];
+  let t=0,raf;
+  function drawBox(c,alpha){
+    const bw=190,bh=110;ctx.save();ctx.globalAlpha=alpha;
+    ctx.fillStyle='rgba(0,0,0,.65)';rr(ctx,c.x-bw/2,c.y-bh/2,bw,bh,9);ctx.fill();
+    ctx.strokeStyle=c.col;ctx.lineWidth=1.5;rr(ctx,c.x-bw/2,c.y-bh/2,bw,bh,9);ctx.stroke();
+    ctx.fillStyle=c.col+'28';rr(ctx,c.x-bw/2,c.y-bh/2,bw,28,{tl:9,tr:9,bl:0,br:0});ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText(c.name,c.x,c.y-bh/2+18);
+    ctx.textAlign='left';ctx.font='11px monospace';ctx.fillStyle='rgba(255,255,255,.5)';
+    c.attrs.forEach((a,i)=>ctx.fillText(a,c.x-bw/2+8,c.y-bh/2+42+i*14));
+    ctx.strokeStyle=c.col+'44';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(c.x-bw/2,c.y-bh/2+68);ctx.lineTo(c.x+bw/2,c.y-bh/2+68);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.38)';c.mths.forEach((m,i)=>ctx.fillText(m,c.x-bw/2+8,c.y-bh/2+82+i*14));
+    ctx.restore();
+  }
+  function drawArr(x1,y1,x2,y2,alpha){
+    ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle='rgba(59,130,246,.65)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);
+    const ang=Math.atan2(y2-y1,x2-x1);
+    ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-13*Math.cos(ang-.4),y2-13*Math.sin(ang-.4));ctx.lineTo(x2-13*Math.cos(ang+.4),y2-13*Math.sin(ang+.4));ctx.closePath();
+    ctx.strokeStyle='#3b82f6';ctx.stroke();ctx.fillStyle='rgba(7,7,26,.9)';ctx.fill();ctx.restore();
+  }
+  function draw(){
+    t+=.018;ctx.clearRect(0,0,w,h);
+    const a1=Math.min(1,t/1.2),a2=Math.min(1,Math.max(0,(t-1)/1.2)),a3=Math.min(1,Math.max(0,(t-2)/1.2));
+    drawBox(cls[0],a1);drawBox(cls[1],a2);drawBox(cls[2],a3);
+    if(a2>0)drawArr(cls[1].x,cls[1].y-55,cls[0].x-35,cls[0].y+55,a2);
+    if(a3>0)drawArr(cls[2].x,cls[2].y-55,cls[0].x+35,cls[0].y+55,a3);
+    if(a2>.5){ctx.fillStyle='rgba(59,130,246,.55)';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('extends (herança)',w*.5,h*.43);ctx.textAlign='left';}
+    if(t>6)t=0;
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aML() {
+  const s = mkCanvas('c-ml'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const pts=[
+    ...Array.from({length:20},()=>({x:w*.08+Math.random()*w*.36,y:h*.1+Math.random()*h*.45,c:0})),
+    ...Array.from({length:20},()=>({x:w*.56+Math.random()*w*.36,y:h*.45+Math.random()*h*.45,c:1})),
+  ];
+  let t=0,raf;
+  function draw(){
+    t+=.016;ctx.clearRect(0,0,w,h);
+    for(let x=0;x<w;x+=44){ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+    for(let y=0;y<h;y+=44){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+    const prog=Math.min(1,t/3);
+    ctx.beginPath();ctx.strokeStyle=`rgba(168,85,247,${prog*.8})`;ctx.lineWidth=2.5;
+    for(let x=0;x<w;x+=3){const y=h*.48+Math.sin(x/w*Math.PI-Math.PI/2)*h*.22;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();
+    pts.forEach(p=>{
+      if(p.c===0){ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fillStyle='#60a5fa';ctx.fill();}
+      else{ctx.strokeStyle='#f472b6';ctx.lineWidth=2;const sz=7;ctx.beginPath();ctx.moveTo(p.x-sz,p.y-sz);ctx.lineTo(p.x+sz,p.y+sz);ctx.moveTo(p.x+sz,p.y-sz);ctx.lineTo(p.x-sz,p.y+sz);ctx.stroke();}
+    });
+    ctx.font='11px sans-serif';ctx.fillStyle='rgba(96,165,250,.8)';ctx.fillText('Classe A',w*.07,h*.08);
+    ctx.fillStyle='rgba(244,114,182,.8)';ctx.fillText('Classe B',w*.07,h*.22);
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aDL() {
+  const s = mkCanvas('c-dl'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const layers=[3,5,4,2];
+  const nodeR=13;
+  const lxs=layers.map((_,i)=>w*(i+1)/(layers.length+1));
+  const nodes=[];
+  layers.forEach((cnt,li)=>{
+    for(let ni=0;ni<cnt;ni++){nodes.push({x:lxs[li],y:h/2+(ni-(cnt-1)/2)*50,li,ni});}
+  });
+  const sigs=[];let lastSpawn=-999,raf;
+  function draw(ts){
+    ctx.clearRect(0,0,w,h);
+    nodes.forEach(n=>{if(n.li===layers.length-1)return;nodes.filter(m=>m.li===n.li+1).forEach(m=>{ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=1;ctx.moveTo(n.x,n.y);ctx.lineTo(m.x,m.y);ctx.stroke();});});
+    if(ts-lastSpawn>600){lastSpawn=ts;nodes.filter(n=>n.li===0).forEach(n=>sigs.push({li:0,ni:n.ni,prog:0}));}
+    for(let i=sigs.length-1;i>=0;i--){
+      const sig=sigs[i];sig.prog+=.022;
+      const src=nodes.find(n=>n.li===sig.li&&n.ni===sig.ni);if(!src)continue;
+      const dsts=sig.li<layers.length-1?nodes.filter(n=>n.li===sig.li+1):[];
+      dsts.forEach(dst=>{
+        const cx2=src.x+(dst.x-src.x)*sig.prog,cy2=src.y+(dst.y-src.y)*sig.prog;
+        const hue=200+sig.li*40;const gr=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,7);
+        gr.addColorStop(0,`hsla(${hue},100%,70%,.9)`);gr.addColorStop(1,`hsla(${hue},100%,70%,0)`);
+        ctx.beginPath();ctx.arc(cx2,cy2,7,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+      });
+      if(sig.prog>=1){if(sig.li<layers.length-1)nodes.filter(n=>n.li===sig.li+1).forEach(m=>sigs.push({li:sig.li+1,ni:m.ni,prog:0}));sigs.splice(i,1);}
+    }
+    nodes.forEach(n=>{
+      ctx.beginPath();ctx.arc(n.x,n.y,nodeR,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.7)';ctx.fill();
+      ctx.strokeStyle=`hsl(${200+n.li*40},80%,65%)`;ctx.lineWidth=2;ctx.stroke();
+    });
+    ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.3)';
+    ['Input','Hidden','Hidden','Output'].forEach((l,i)=>ctx.fillText(l,lxs[i],h*.95));
+    ctx.textAlign='left';
+    raf=requestAnimationFrame(draw);
+  }
+  raf=requestAnimationFrame(draw); return ()=>cancelAnimationFrame(raf);
+}
+
+function aData() {
+  const s = mkCanvas('c-data'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const bars=[{l:'Jan',v:42},{l:'Fev',v:67},{l:'Mar',v:55},{l:'Abr',v:88},{l:'Mai',v:73},{l:'Jun',v:95},{l:'Jul',v:61}];
+  const cols=['#00d4ff','#22d3ee','#06b6d4','#0891b2','#00d4ff','#22d3ee','#06b6d4'];
+  let t=0,raf;
+  function draw(){
+    t+=.016;ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='13px sans-serif';ctx.fillText('Desempenho por Período',w*.07,h*.1);
+    const bw=w*.08,gap=w*.04,by=h*.82,ch=h*.6,sx=w*.1;
+    bars.forEach((b,i)=>{
+      const prog=Math.min(1,t/(i*.3+.8));
+      const bh=ch*(b.v/100)*prog,bx=sx+i*(bw+gap);
+      const gr=ctx.createLinearGradient(bx,by-bh,bx,by);gr.addColorStop(0,cols[i]);gr.addColorStop(1,cols[i]+'44');
+      ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(bx+3,by-bh+3,bw,bh);
+      rr(ctx,bx,by-bh,bw,bh,{tl:4,tr:4,bl:0,br:0});ctx.fillStyle=gr;ctx.fill();
+      if(prog>.7){ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(b.v,bx+bw/2,by-bh-7);}
+      ctx.fillStyle='rgba(255,255,255,.38)';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(b.l,bx+bw/2,by+15);
+    });
+    ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(w*.07,h*.18);ctx.lineTo(w*.07,by+2);ctx.lineTo(w*.93,by+2);ctx.stroke();
+    ctx.textAlign='left';raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aMobile() {
+  const s = mkCanvas('c-mobile'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  let t=0,raf;
+  function draw(){
+    t+=.016;ctx.clearRect(0,0,w,h);
+    const pw=155,ph=270,px=w/2-pw/2,py=h/2-ph/2;
+    ctx.fillStyle='#111827';rr(ctx,px,py,pw,ph,20);ctx.fill();
+    ctx.strokeStyle='rgba(99,102,241,.5)';ctx.lineWidth=2;rr(ctx,px,py,pw,ph,20);ctx.stroke();
+    ctx.fillStyle='#000';rr(ctx,px+pw/2-26,py+5,52,14,7);ctx.fill();
+    ctx.save();ctx.beginPath();rr(ctx,px+4,py+24,pw-8,ph-50,14);ctx.clip();
+    ctx.fillStyle='#1f2937';ctx.fillRect(px+4,py+24,pw-8,ph-50);
+    const a1=Math.min(1,t);ctx.globalAlpha=a1;
+    ctx.fillStyle='rgba(99,102,241,.3)';ctx.fillRect(px+4,py+24,pw-8,34);
+    ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.fillText('Dashboard',px+pw/2,py+46);
+    [[.4,1.2,'Projetos','12'],[.7,2,'Tarefas','47'],[1,2.8,'Mensagens','5']].forEach(([a,d,label,val])=>{
+      ctx.globalAlpha=Math.min(1,Math.max(0,(t-d)));
+      ctx.fillStyle='rgba(255,255,255,.08)';rr(ctx,px+10,py+68+a*120,pw-20,38,7);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillText(label,px+18,py+68+a*120+14);
+      ctx.fillStyle='#6366f1';ctx.font='bold 14px sans-serif';ctx.fillText(val,px+18,py+68+a*120+30);
+    });
+    ctx.globalAlpha=Math.min(1,t/1.5);ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(px+4,py+ph-68,pw-8,44);
+    ['🏠','📊','⚙️'].forEach((ic,i)=>{ctx.font='15px serif';ctx.textAlign='center';ctx.fillText(ic,px+pw/4+(i-1)*pw/4*2,py+ph-48);});
+    ctx.restore();ctx.textAlign='left';
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aBack() {
+  const s = mkCanvas('c-back'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const ns=[{x:w*.12,y:h*.5,ic:'💻',lb:'Client'},{x:w*.5,y:h*.5,ic:'⚙️',lb:'API Server'},{x:w*.88,y:h*.5,ic:'🗄️',lb:'Database'}];
+  const pkts=[];let t=0,lastS=-1,raf;
+  function draw(){
+    t+=.02;ctx.clearRect(0,0,w,h);
+    ns.forEach((n,i)=>{if(i===ns.length-1)return;const m=ns[i+1];ctx.beginPath();ctx.strokeStyle='rgba(20,184,166,.15)';ctx.lineWidth=2;ctx.moveTo(n.x,n.y);ctx.lineTo(m.x,m.y);ctx.stroke();});
+    ns.forEach(n=>{
+      const gr=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,38);gr.addColorStop(0,'rgba(20,184,166,.15)');gr.addColorStop(1,'rgba(20,184,166,0)');
+      ctx.beginPath();ctx.arc(n.x,n.y,38,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+      ctx.beginPath();ctx.arc(n.x,n.y,26,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.7)';ctx.fill();
+      ctx.strokeStyle='rgba(20,184,166,.5)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.font='18px serif';ctx.textAlign='center';ctx.fillText(n.ic,n.x,n.y+6);
+      ctx.fillStyle='rgba(255,255,255,.45)';ctx.font='10px sans-serif';ctx.fillText(n.lb,n.x,n.y+44);
+    });
+    if(Math.floor(t/3)!==lastS){lastS=Math.floor(t/3);pkts.push({fi:0,ti:1,prog:0,ret:false,lbl:'GET /users',sp:false});}
+    for(let i=pkts.length-1;i>=0;i--){
+      const p=pkts[i];p.prog+=.014;
+      const a=ns[p.fi],b=ns[p.ti];
+      ctx.beginPath();ctx.arc(a.x+(b.x-a.x)*p.prog,a.y+(b.y-a.y)*p.prog,5,0,Math.PI*2);
+      ctx.fillStyle=p.ret?'#14b8a6':'#fbbf24';ctx.fill();
+      if(p.prog>=1){
+        if(!p.ret&&p.ti===1&&!p.sp){p.sp=true;pkts.push({fi:1,ti:2,prog:0,ret:false,lbl:'SELECT *',sp:false});}
+        if(!p.ret&&p.ti===2)pkts.push({fi:2,ti:1,prog:0,ret:true,lbl:'rows[]',sp:false});
+        if(p.ret&&p.ti===1)pkts.push({fi:1,ti:0,prog:0,ret:true,lbl:'200 OK',sp:false});
+        pkts.splice(i,1);
+      }
+    }
+    ctx.font='10px monospace';ctx.textAlign='center';ctx.fillStyle='rgba(251,191,36,.65)';
+    ctx.fillText('GET /api/users',w*.31,h*.35);ctx.fillText('SELECT * FROM users',w*.69,h*.35);
+    ctx.textAlign='left';raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aFront() {
+  const s = mkCanvas('c-front'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const lines=[
+    ['<html lang="pt-BR">','#fde68a'],['  <head>','#fde68a'],
+    ['    <title>Minha App</title>','#86efac'],['  </head>','#fde68a'],
+    ['  <body>','#fde68a'],['    <nav class="navbar">','#6ee7b7'],
+    ['      <h1>Logo</h1>','#93c5fd'],['      <ul>...</ul>','#93c5fd'],
+    ['    </nav>','#6ee7b7'],['    <main>','#6ee7b7'],
+    ['      <h2>Bem-vindo!</h2>','#93c5fd'],['      <button>Clique</button>','#f9a8d4'],
+    ['    </main>','#6ee7b7'],['  </body>','#fde68a'],['</html>','#fde68a'],
+  ];
+  let t=0,raf;
+  function draw(){
+    t+=.016;const shown=Math.min(lines.length,Math.floor(t/.45));
+    ctx.clearRect(0,0,w,h);ctx.fillStyle='rgba(0,0,0,.6)';rr(ctx,w*.04,h*.04,w*.92,h*.92,10);ctx.fill();
+    ctx.strokeStyle='rgba(234,179,8,.2)';ctx.lineWidth=1;rr(ctx,w*.04,h*.04,w*.92,h*.92,10);ctx.stroke();
+    const lh=21,sy=h*.1;
+    for(let i=0;i<shown;i++){
+      ctx.font='11px monospace';ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillText(String(i+1).padStart(2,' '),w*.06,sy+i*lh);
+      ctx.fillStyle=lines[i][1];ctx.fillText(lines[i][0],w*.12,sy+i*lh);
+    }
+    if(shown<lines.length&&Math.floor(Date.now()/500)%2){ctx.fillStyle='#eab308';ctx.fillRect(w*.12,sy+shown*lh-11,7,14);}
+    if(t>8)t=0;raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aDeploy() {
+  const s = mkCanvas('c-deploy'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const st=[{l:'Push',ic:'📤'},{l:'CI',ic:'⚙️'},{l:'Build',ic:'📦'},{l:'Deploy',ic:'🚀'},{l:'Online',ic:'🌐'}];
+  let t=0,raf;
+  function draw(){
+    t+=.014;const prog=(t%7)/6;ctx.clearRect(0,0,w,h);
+    const xs=st.map((_,i)=>w*(i+1)/(st.length+1));
+    ctx.beginPath();ctx.strokeStyle='rgba(6,182,212,.15)';ctx.lineWidth=3;ctx.moveTo(xs[0],h*.5);ctx.lineTo(xs[xs.length-1],h*.5);ctx.stroke();
+    ctx.beginPath();const gr=ctx.createLinearGradient(xs[0],0,xs[xs.length-1],0);gr.addColorStop(0,'#06b6d4');gr.addColorStop(1,'#a855f7');
+    ctx.strokeStyle=gr;ctx.lineWidth=3;ctx.moveTo(xs[0],h*.5);ctx.lineTo(xs[0]+(xs[xs.length-1]-xs[0])*prog,h*.5);ctx.stroke();
+    st.forEach((s2,i)=>{
+      const x=xs[i],active=(i/(st.length-1))<=prog;
+      ctx.beginPath();ctx.arc(x,h*.5,22,0,Math.PI*2);ctx.fillStyle=active?'rgba(6,182,212,.2)':'rgba(255,255,255,.04)';ctx.fill();
+      ctx.strokeStyle=active?'#06b6d4':'rgba(255,255,255,.15)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.font='16px serif';ctx.textAlign='center';ctx.fillText(s2.ic,x,h*.5+6);
+      ctx.fillStyle=active?'rgba(255,255,255,.7)':'rgba(255,255,255,.22)';ctx.font='10px sans-serif';ctx.fillText(s2.l,x,h*.5+42);
+      if(active&&i>0){ctx.fillStyle='#10b981';ctx.font='bold 11px sans-serif';ctx.fillText('✓',x,h*.5-32);}
+    });
+    const up=Math.min(1,Math.max(0,(prog-.8)/.2));
+    if(up>0){ctx.globalAlpha=up;ctx.fillStyle='rgba(0,0,0,.5)';rr(ctx,w*.18,h*.75,w*.64,28,7);ctx.fill();ctx.strokeStyle='rgba(16,185,129,.4)';ctx.lineWidth=1;rr(ctx,w*.18,h*.75,w*.64,28,7);ctx.stroke();ctx.fillStyle='#10b981';ctx.font='11px monospace';ctx.fillText('🔒 https://meu-projeto.github.io  ✓',w*.2,h*.75+18);ctx.globalAlpha=1;}
+    ctx.textAlign='left';raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aIoT() {
+  const s = mkCanvas('c-iot'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const hub={x:w*.5,y:h*.5};
+  const devs=[{ic:'💡',lb:'Smart Light',ang:0},{ic:'🌡️',lb:'Sensor',ang:60},{ic:'🚗',lb:'Veículo',ang:120},{ic:'📱',lb:'App',ang:180},{ic:'🏭',lb:'Máquina',ang:240},{ic:'🌱',lb:'Solo Agro',ang:300}];
+  const R=h*.32;let t=0,raf;
+  function draw(){
+    t+=.016;ctx.clearRect(0,0,w,h);
+    devs.forEach((d,i)=>{
+      const ang=(d.ang+t*9)*Math.PI/180;
+      const dx=hub.x+Math.cos(ang)*R,dy=hub.y+Math.sin(ang)*R*.55;
+      const pp=(t*.5+i/devs.length)%1;
+      const px=hub.x+(dx-hub.x)*pp,py=hub.y+(dy-hub.y)*pp;
+      ctx.beginPath();ctx.strokeStyle='rgba(52,211,153,.07)';ctx.lineWidth=1.5;ctx.moveTo(hub.x,hub.y);ctx.lineTo(dx,dy);ctx.stroke();
+      ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fillStyle='rgba(52,211,153,.7)';ctx.fill();
+      ctx.beginPath();ctx.arc(dx,dy,20,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.65)';ctx.fill();ctx.strokeStyle='rgba(52,211,153,.3)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.font='14px serif';ctx.textAlign='center';ctx.fillText(d.ic,dx,dy+5);ctx.fillStyle='rgba(255,255,255,.38)';ctx.font='9px sans-serif';ctx.fillText(d.lb,dx,dy+32);
+    });
+    const gr=ctx.createRadialGradient(hub.x,hub.y,0,hub.x,hub.y,38);gr.addColorStop(0,'rgba(52,211,153,.3)');gr.addColorStop(1,'rgba(52,211,153,0)');
+    ctx.beginPath();ctx.arc(hub.x,hub.y,38,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+    ctx.beginPath();ctx.arc(hub.x,hub.y,26,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.8)';ctx.fill();ctx.strokeStyle='rgba(52,211,153,.6)';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#34d399';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.fillText('HUB',hub.x,hub.y+4);ctx.textAlign='left';
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aMicro() {
+  const s = mkCanvas('c-micro'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  let t=0,raf;
+  const cx=w*.5,cy=h*.5;
+  function draw(){
+    t+=.02;ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='#1f2937';ctx.fillRect(cx-55,cy-45,110,90);
+    ctx.strokeStyle='rgba(239,68,68,.4)';ctx.lineWidth=1.5;ctx.strokeRect(cx-55,cy-45,110,90);
+    ctx.fillStyle='rgba(239,68,68,.6)';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.fillText('MCU',cx,cy-10);
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.font='8px sans-serif';ctx.fillText('Arduino',cx,cy+8);
+    for(let i=0;i<4;i++){const py=cy-32+i*20;ctx.fillStyle='#4b5563';ctx.fillRect(cx-73,py-3,18,6);ctx.strokeStyle='rgba(239,68,68,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-73,py);ctx.lineTo(cx-55,py);ctx.stroke();}
+    for(let i=0;i<4;i++){const py=cy-32+i*20;ctx.fillStyle='#4b5563';ctx.fillRect(cx+55,py-3,18,6);}
+    const wa=(Math.sin(t*4)+1)/2*.4+.3;ctx.strokeStyle=`rgba(239,68,68,${wa})`;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx+73,cy-10);ctx.lineTo(w*.84,cy-10);ctx.lineTo(w*.84,cy+32);ctx.stroke();
+    const on=Math.sin(t*3.5)>.2;
+    if(on){const lg=ctx.createRadialGradient(w*.84,cy+52,0,w*.84,cy+52,30);lg.addColorStop(0,'rgba(239,68,68,.6)');lg.addColorStop(1,'rgba(239,68,68,0)');ctx.beginPath();ctx.arc(w*.84,cy+52,30,0,Math.PI*2);ctx.fillStyle=lg;ctx.fill();}
+    ctx.beginPath();ctx.arc(w*.84,cy+52,11,0,Math.PI*2);ctx.fillStyle=on?'#ef4444':'#3f0808';ctx.fill();ctx.strokeStyle=on?'#fca5a5':'#6b7280';ctx.lineWidth=1.5;ctx.stroke();
+    const dp=(t*.6)%1,hx=cx+73,hy=cy-10,ex=w*.84,ey=cy-10,total=(ex-hx)+(cy+32-ey);
+    const dd=dp*total;let dxx,dyy;if(dd<(ex-hx)){dxx=hx+dd;dyy=hy;}else{dxx=ex;dyy=hy+(dd-(ex-hx));}
+    ctx.beginPath();ctx.arc(dxx,dyy,4,0,Math.PI*2);ctx.fillStyle='rgba(239,68,68,.9)';ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.45)';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(on?'LED ON ●':'LED OFF ○',w*.84,cy+76);ctx.textAlign='left';
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aProto() {
+  const s = mkCanvas('c-proto'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  let t=0,raf;const total=14;
+  function draw(){
+    t+=.014;ctx.clearRect(0,0,w,h);
+    const layers=Math.min(total,Math.floor(t*2.5));
+    const bw=130,bd=55,lh=9,bx=w*.5,by=h*.78;
+    for(let i=0;i<layers;i++){
+      const py=by-i*(lh+1),a=.35+i/total*.55;
+      const r=Math.floor(210*i/total+35);
+      ctx.fillStyle=`rgba(${r},158,11,${a})`;
+      ctx.beginPath();ctx.moveTo(bx,py);ctx.lineTo(bx+bw/2,py+bd*.25);ctx.lineTo(bx+bw/2,py+bd*.25+lh);ctx.lineTo(bx,py+lh);ctx.closePath();ctx.fill();
+      ctx.fillStyle=`rgba(${Math.floor(r*.7)},110,8,${a})`;
+      ctx.beginPath();ctx.moveTo(bx,py);ctx.lineTo(bx-bw/2,py+bd*.25);ctx.lineTo(bx-bw/2,py+bd*.25+lh);ctx.lineTo(bx,py+lh);ctx.closePath();ctx.fill();
+      ctx.fillStyle=`rgba(${Math.min(255,r+30)},175,15,${a+.08})`;
+      ctx.beginPath();ctx.moveTo(bx,py);ctx.lineTo(bx+bw/2,py+bd*.25);ctx.lineTo(bx,py+bd*.5);ctx.lineTo(bx-bw/2,py+bd*.25);ctx.closePath();ctx.fill();
+    }
+    if(layers<total){
+      const ny=by-layers*(lh+1)-10,nx=bx+Math.sin(t*4)*bw*.28;
+      ctx.fillStyle='#94a3b8';ctx.fillRect(nx-5,ny-18,10,18);
+      ctx.beginPath();ctx.moveTo(nx-5,ny);ctx.lineTo(nx+5,ny);ctx.lineTo(nx+3,ny+7);ctx.lineTo(nx-3,ny+7);ctx.closePath();ctx.fillStyle='#475569';ctx.fill();
+      ctx.beginPath();ctx.arc(nx,ny+7,3,0,Math.PI*2);ctx.fillStyle='rgba(245,158,11,.9)';ctx.fill();
+    } else {
+      ctx.fillStyle='rgba(245,158,11,.8)';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('Protótipo concluído ✓',w*.5,h*.18);
+      if(t>8)t=0;
+    }
+    ctx.textAlign='left';raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aCV() {
+  const s = mkCanvas('c-cv'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const obs=[
+    {x:w*.18,y:h*.22,bw:115,bh:135,lb:'Pessoa',cf:97,col:'#8b5cf6',d:1},
+    {x:w*.53,y:h*.18,bw:88,bh:75,lb:'Laptop',cf:94,col:'#6366f1',d:2},
+    {x:w*.63,y:h*.52,bw:65,bh:58,lb:'Copo',cf:88,col:'#a78bfa',d:2.8},
+  ];
+  let t=0,raf;
+  const grid=Array.from({length:192},()=>({b:Math.random()*.3+.04}));
+  function draw(){
+    t+=.018;ctx.clearRect(0,0,w,h);
+    const cw=w/16,ch=h/12;grid.forEach((c,i)=>{const r=Math.floor(i/16),cc=i%16;ctx.fillStyle=`rgba(139,92,246,${c.b*.4})`;ctx.fillRect(cc*cw,r*ch,cw-1,ch-1);});
+    const sy=(t*75)%h;const sg=ctx.createLinearGradient(0,sy-18,0,sy+18);sg.addColorStop(0,'rgba(139,92,246,0)');sg.addColorStop(.5,'rgba(139,92,246,.28)');sg.addColorStop(1,'rgba(139,92,246,0)');
+    ctx.fillStyle=sg;ctx.fillRect(0,sy-18,w,36);
+    obs.forEach(ob=>{
+      const p=Math.min(1,Math.max(0,(t-ob.d)/.55));if(p<=0)return;
+      ctx.save();ctx.globalAlpha=p;ctx.strokeStyle=ob.col;ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.strokeRect(ob.x,ob.y,ob.bw,ob.bh);ctx.setLineDash([]);
+      const cs=10;
+      [[ob.x,ob.y],[ob.x+ob.bw,ob.y],[ob.x,ob.y+ob.bh],[ob.x+ob.bw,ob.y+ob.bh]].forEach(([cx2,cy2])=>{
+        ctx.strokeStyle=ob.col;ctx.lineWidth=2.5;ctx.beginPath();
+        if(cx2===ob.x){ctx.moveTo(cx2+cs,cy2);ctx.lineTo(cx2,cy2);ctx.lineTo(cx2,cy2+(cy2===ob.y?cs:-cs));}
+        else{ctx.moveTo(cx2-cs,cy2);ctx.lineTo(cx2,cy2);ctx.lineTo(cx2,cy2+(cy2===ob.y?cs:-cs));}
+        ctx.stroke();
+      });
+      ctx.fillStyle=ob.col;ctx.fillRect(ob.x,ob.y-20,ob.bw,20);
+      ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='left';ctx.fillText(`${ob.lb} ${ob.cf}%`,ob.x+5,ob.y-6);
+      ctx.restore();
+    });
+    ctx.textAlign='left';raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aTopicos() {
+  const s = mkCanvas('c-topicos'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const topics=[
+    {lb:'IA Generativa',R:h*.32,spd:.38,off:0,col:'#a855f7'},
+    {lb:'Computação Quântica',R:h*.38,spd:.24,off:1.3,col:'#8b5cf6'},
+    {lb:'Realidade Aumentada',R:h*.28,spd:-.32,off:2.2,col:'#c084fc'},
+    {lb:'Bioinformática',R:h*.4,spd:.2,off:3.6,col:'#7c3aed'},
+    {lb:'Blockchain',R:h*.33,spd:-.42,off:4.3,col:'#a78bfa'},
+  ];
+  let t=0,raf;
+  function draw(){
+    t+=.01;ctx.clearRect(0,0,w,h);
+    topics.forEach(tp=>{ctx.beginPath();ctx.ellipse(w*.5,h*.5,tp.R,tp.R*.5,0,0,Math.PI*2);ctx.strokeStyle='rgba(168,85,247,.07)';ctx.lineWidth=1;ctx.stroke();});
+    const gr=ctx.createRadialGradient(w*.5,h*.5,0,w*.5,h*.5,55);gr.addColorStop(0,'rgba(168,85,247,.35)');gr.addColorStop(1,'rgba(168,85,247,0)');
+    ctx.beginPath();ctx.arc(w*.5,h*.5,55,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+    ctx.beginPath();ctx.arc(w*.5,h*.5,34,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,.8)';ctx.fill();ctx.strokeStyle='rgba(168,85,247,.6)';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#a855f7';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText('CA',w*.5,h*.5+4);
+    topics.forEach(tp=>{
+      const ang=tp.off+t*tp.spd;const tx=w*.5+Math.cos(ang)*tp.R,ty=h*.5+Math.sin(ang)*tp.R*.5;
+      ctx.font='11px sans-serif';const tw=ctx.measureText(tp.lb).width+18;
+      ctx.fillStyle='rgba(0,0,0,.75)';rr(ctx,tx-tw/2,ty-13,tw,24,12);ctx.fill();
+      ctx.strokeStyle=tp.col+'88';ctx.lineWidth=1;rr(ctx,tx-tw/2,ty-13,tw,24,12);ctx.stroke();
+      ctx.fillStyle=tp.col;ctx.textAlign='center';ctx.fillText(tp.lb,tx,ty+4);
+    });
+    ctx.textAlign='left';raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+function aCTA() {
+  const s = mkCanvas('c-cta'); if (!s) return ()=>{};
+  const {ctx,w,h} = s;
+  const pts=Array.from({length:55},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*2+.5,hue:180+Math.random()*80}));
+  let raf;
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`hsla(${p.hue},100%,70%,.35)`;ctx.fill();});
+    raf=requestAnimationFrame(draw);
+  }
+  draw(); return ()=>cancelAnimationFrame(raf);
+}
+
+const animFns = {
+  hero: aHero, otimizacao: aOtim, comp: aComp, poo: aPoo, ml: aML,
+  dl: aDL, data: aData, mobile: aMobile, back: aBack, front: aFront,
+  deploy: aDeploy, iot: aIoT, micro: aMicro, proto: aProto, cv: aCV,
+  topicos: aTopicos, cta: aCTA
+};
+
+// Start hero animation
+startAnim(0);
+</script>
+</body>
+</html>
