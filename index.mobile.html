@@ -137,6 +137,7 @@ canvas.bg{position:absolute;inset:0;width:100%;height:100%;opacity:.72}
   .subj-canvas{order:-1;height:min(38vh,250px);flex:0 0 auto;width:100%}
   .slide[data-id="poo"] .subj-canvas,
   .slide[data-id="iot"] .subj-canvas{height:min(50vh,340px)}
+  .slide[data-id="dl"] .subj-canvas{height:min(52vh,360px)}
   .subj-canvas canvas{height:100%!important}
   .career-grid{grid-template-columns:1fr;margin-top:16px}
 }
@@ -913,7 +914,7 @@ function aPoo() {
   ];
   let t=0,raf;
   function drawBox(c,alpha){
-    const bw=190,bh=110;ctx.save();ctx.globalAlpha=alpha;
+    const bw=Math.min(190, Math.max(138, w * 0.34)),bh=110;ctx.save();ctx.globalAlpha=alpha;
     ctx.fillStyle='rgba(0,0,0,.65)';rr(ctx,c.x-bw/2,c.y-bh/2,bw,bh,9);ctx.fill();
     ctx.strokeStyle=c.col;ctx.lineWidth=1.5;rr(ctx,c.x-bw/2,c.y-bh/2,bw,bh,9);ctx.stroke();
     ctx.fillStyle=c.col+'28';rr(ctx,c.x-bw/2,c.y-bh/2,bw,28,{tl:9,tr:9,bl:0,br:0});ctx.fill();
