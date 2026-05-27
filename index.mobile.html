@@ -119,7 +119,7 @@ canvas.bg{position:absolute;inset:0;width:100%;height:100%;opacity:.72}
 @media (max-width: 900px) {
   html,body{overflow:hidden}
   #nav{display:none}
-  .slide{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+  .slide{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:10px 0 12px}
   .info,.obrig,.careers,.cta{padding:14px 18px 18px}
   .info,.obrig,.careers,.cta{justify-content:flex-start}
   .hero-content{padding:10px 18px 18px;justify-content:center}
@@ -135,6 +135,8 @@ canvas.bg{position:absolute;inset:0;width:100%;height:100%;opacity:.72}
   .subj{display:flex;flex-direction:column;padding-top:14px}
   .subj-info{padding:12px 18px 24px;justify-content:flex-start}
   .subj-canvas{order:-1;height:min(38vh,250px);flex:0 0 auto;width:100%}
+  .slide[data-id="poo"] .subj-canvas,
+  .slide[data-id="iot"] .subj-canvas{height:min(50vh,340px)}
   .subj-canvas canvas{height:100%!important}
   .career-grid{grid-template-columns:1fr;margin-top:16px}
 }
